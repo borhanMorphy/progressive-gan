@@ -19,3 +19,6 @@ progan.egg-info/
 # tests & reports
 .coverage
 .tox/
+
+# data
+data
