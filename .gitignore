@@ -1,0 +1,21 @@
+# dev
+.vscode
+.idea
+
+# cache
+*.pyc
+__pycache__
+
+# weights
+*.pt
+*.pth
+*.ckpt
+
+# package
+build/
+dist/
+progan.egg-info/
+
+# tests & reports
+.coverage
+.tox/
