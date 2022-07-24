@@ -3,13 +3,13 @@ import torch.nn as nn
 from torch import Tensor
 import torchvision.transforms.functional as F
 
-def compute_gradient_penalty(x_real: Tensor, x_fake: Tensor, model: nn.Module) -> Tensor:
+def compute_gradient_penalty(x_real: Tensor, x_fake: Tensor, disc: nn.Module) -> Tensor:
     batch_size = x_real.size(0)
     alpha = torch.rand(batch_size, 1, 1, 1, device=x_real.device, dtype=x_real.dtype)
     x_hat = alpha*x_real + (1-alpha) * x_fake
     x_hat.requires_grad = True
 
-    scores = model.progressive_forward(x_hat)
+    scores = disc.progressive_forward(x_hat)
     # compute gradients with respect to `x_hat`
     gradient, = torch.autograd.grad(
         inputs=x_hat,

@@ -1,7 +1,6 @@
 from typing import Tuple
 import math
 
-import torch
 import torch.nn as nn
 from torch import Tensor
 
@@ -35,8 +34,6 @@ class Generator(nn.Module):
             self.pix_norm_cls = nn.Identity
 
         num_progressive_layers = int(math.log2(final_img_size) - math.log2(self.initial_img_size))
-
-        self.latent_dim = latent_dim
 
         factors = list(channel_factors or self.default_channel_factors)
         factors = factors[:num_progressive_layers]
@@ -124,7 +121,3 @@ class Generator(nn.Module):
             x = progressive_block["conv_block"](scaled_x)
 
         return self.to_rgb[-1](x)
-
-    def get_latent_sample(self, batch_size: int = 1) -> Tensor:
-        # N(0,1)
-        return torch.randn(batch_size, self.latent_dim, 1, 1)
