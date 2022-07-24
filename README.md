@@ -22,6 +22,10 @@ cd progressive-gan
 pip install .
 ```
 
+## References
+- [Official Implementation](https://github.com/tkarras/progressive_growing_of_gans)
+- [Paper](https://arxiv.org/pdf/1710.10196.pdf)
+
 ## Citations
 ```bibtex
 @article{karras2017progressive,
