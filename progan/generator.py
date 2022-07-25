@@ -1,5 +1,4 @@
-from typing import Tuple
-import math
+from typing import List
 
 import torch.nn as nn
 from torch import Tensor
@@ -7,9 +6,6 @@ from torch import Tensor
 from .add_ons import WSConv2d, PixelWiseNorm
 
 class Generator(nn.Module):
-    default_channel_factors: Tuple[float] = (1, 1, 1, 1/2, 1/4, 1/8, 1/16, 1/32)
-    initial_img_size: int = 2**2
-    max_img_size: int = 2**10
 
     conv_cls = WSConv2d
     pix_norm_cls = PixelWiseNorm
@@ -18,14 +14,12 @@ class Generator(nn.Module):
         self,
         latent_dim: int = 512,
         img_channels: int = 3,
-        final_img_size: int = 2**10,
-        channel_factors: Tuple[float] = None,
+        num_progressive_layers: int = 8,
+        channel_factors: List[float] = [1, 1, 1, 1/2, 1/4, 1/8, 1/16, 1/32],
         use_wscale: bool = True,
         use_pixelnorm: bool = True,
     ) -> None:
         super().__init__()
-
-        assert self.initial_img_size <= final_img_size <= self.max_img_size
 
         if not use_wscale:
             self.conv_cls = nn.Conv2d
@@ -33,9 +27,7 @@ class Generator(nn.Module):
         if not use_pixelnorm:
             self.pix_norm_cls = nn.Identity
 
-        num_progressive_layers = int(math.log2(final_img_size) - math.log2(self.initial_img_size))
-
-        factors = list(channel_factors or self.default_channel_factors)
+        factors = list(channel_factors)
         factors = factors[:num_progressive_layers]
         factors.insert(0, 1) # add initial layer
 
@@ -99,8 +91,8 @@ class Generator(nn.Module):
             ),
         })
 
-    def progressive_forward(self, z: Tensor, progression_step: int = 0, alpha: float = 1.0) -> Tensor:
-        x = self.initial_block(z)
+    def forward(self, noise: Tensor, progression_step: int = 0, alpha: float = 1.0) -> Tensor:
+        x = self.initial_block(noise)
 
         for progressive_block in self.progressive_blocks[:progression_step]:
             scaled_x = progressive_block["upsample"](x)
@@ -112,12 +104,3 @@ class Generator(nn.Module):
             # fade in
             x = alpha * x + (1-alpha) * prev_x
         return x
-
-
-    def forward(self, z: Tensor) -> Tensor:
-        x = self.initial_block(z)
-        for progressive_block in self.progressive_blocks:
-            scaled_x = progressive_block["upsample"](x)
-            x = progressive_block["conv_block"](scaled_x)
-
-        return self.to_rgb[-1](x)

@@ -1,17 +1,14 @@
-from typing import Tuple
-import math
+from typing import List
 
 from torch import Tensor
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 from .add_ons import WSConv2d, MinibatchSTDDev
 
 
 class Discriminator(nn.Module):
-    default_channel_factors: Tuple[float] = (1, 1, 1, 1/2, 1/4, 1/8, 1/16, 1/32)
-    initial_img_size: int = 2**2
-    max_img_size: int = 2**10
 
     conv_cls = WSConv2d
     mb_stddev_cls = MinibatchSTDDev
@@ -20,14 +17,12 @@ class Discriminator(nn.Module):
         self,
         max_channels: int = 512,
         img_channels: int = 3,
-        final_img_size: int = 2**10,
-        channel_factors: Tuple[float] = None,
+        num_progressive_layers: int = 8,
+        channel_factors: List = [1, 1, 1, 1/2, 1/4, 1/8, 1/16, 1/32],
         use_wscale: bool = True,
         use_mb_stddev: bool = True,
     ) -> None:
         super().__init__()
-
-        assert self.initial_img_size <= final_img_size <= self.max_img_size
 
         if not use_wscale:
             self.conv_cls = nn.Conv2d
@@ -35,12 +30,7 @@ class Discriminator(nn.Module):
         if not use_mb_stddev:
             self.mb_stddev_cls = nn.Identity
 
-        num_progressive_layers = int(math.log2(final_img_size) - math.log2(self.initial_img_size))
-
-        self.final_img_size = final_img_size
-
-        factors = channel_factors or self.default_channel_factors
-        factors = list(reversed(factors[:num_progressive_layers]))
+        factors = list(reversed(channel_factors[:num_progressive_layers]))
         factors.append(1) # add last layer factor
 
         self.from_rgb = nn.ModuleList(
@@ -107,9 +97,8 @@ class Discriminator(nn.Module):
             "downsample": nn.AvgPool2d(kernel_size=2, stride=2),
         })
 
-    def progressive_forward(self, x: Tensor, alpha: float = 1.0) -> Tensor:
-        img_size = x.size(-1)
-        start_step = int(math.log2(self.final_img_size) - math.log2(img_size))
+    def forward(self, x: Tensor, progression_step: int = 0, alpha: float = 1.0) -> Tensor:
+        start_step = len(self.progressive_blocks) - progression_step
         # max: 8
         # min: 0
         out = self.from_rgb[start_step](x)
@@ -123,15 +112,5 @@ class Discriminator(nn.Module):
                 )
                 # fade in
                 out = alpha * out + (1 - alpha) * prev_out
-
-        return self.initial_block(out)
-
-
-    def forward(self, x: Tensor) -> Tensor:
-        out = self.from_rgb[-1](x)
-
-        for progressive_block in self.progressive_blocks:
-            out = progressive_block["conv_block"](out)
-            out = progressive_block["downsample"](out)
 
         return self.initial_block(out)
