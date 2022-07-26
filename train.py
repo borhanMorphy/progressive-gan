@@ -1,11 +1,14 @@
+import argparse
+from torch.utils.tensorboard import SummaryWriter
 from torchvision.datasets import MNIST, CelebA
 import progan
 
-def main():
+def main(args):
+
     dataset = MNIST(
         root="./data",
         download=True,
-        train=False,
+        train=True,
     )
 
     model_config = progan.ModelConfig(
@@ -19,9 +22,14 @@ def main():
     model = progan.ProGAN.from_config(model_config)
 
     trainer = progan.LiteTrainer(
-        precision = 32,
-        gpus=1,
+        precision=args.precision,
+        gpus=args.gpus,
     )
+
+    trainer.logger = SummaryWriter(log_dir=args.log_dir)
+
+    if args.seed is not None:
+        trainer.seed_everything(seed=args.seed)
 
     trainer.run(
         model,
@@ -31,4 +39,11 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--gpus", "-g", type=int, default=1)
+    ap.add_argument("--precision", "-p", type=int, default=32, choices=[16, 32])
+    ap.add_argument("--seed", "-s", type=int)
+    ap.add_argument("--log-dir", "-l", type=str)
+
+    args = ap.parse_args()
+    main(args)

@@ -18,6 +18,8 @@ class TrainerConfig(BaseModel):
 
     num_workers: int = 0
 
+    log_every_n_iter: int = 20
+
     def get_step_configs(
         self,
         num_progression: int,

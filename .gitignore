@@ -22,3 +22,6 @@ progan.egg-info/
 
 # data
 data
+
+# logs
+runs/
