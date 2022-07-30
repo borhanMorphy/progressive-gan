@@ -5,8 +5,9 @@
 - [ ] add tutorials
 
 ## Features
-- [x] add pytorch lightning trainer
-- [ ] add interpolation gif to readme
+- [ ] add convergence proof
+- [ ] tqdm nested loop management
+- [x] add interpolation gif to readme
 - [ ] add badges
 - [ ] add metrics
 - [ ] add more stats
