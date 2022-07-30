@@ -27,6 +27,7 @@ def main(args):
     )
 
     trainer.logger = SummaryWriter(log_dir=args.log_dir)
+    trainer.checkpoint_path = args.checkpoint_path
 
     if args.seed is not None:
         trainer.seed_everything(seed=args.seed)
@@ -44,6 +45,7 @@ if __name__ == '__main__':
     ap.add_argument("--precision", "-p", type=int, default=32, choices=[16, 32])
     ap.add_argument("--seed", "-s", type=int)
     ap.add_argument("--log-dir", "-l", type=str)
+    ap.add_argument("--checkpoint-path", type=str)
 
     args = ap.parse_args()
     main(args)
