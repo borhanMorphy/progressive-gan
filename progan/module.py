@@ -1,5 +1,6 @@
-from typing import Tuple
+from typing import Tuple, Dict
 import math
+from collections import OrderedDict
 
 import torch
 import torch.nn as nn
@@ -28,11 +29,16 @@ class ProGAN(nn.Module):
     ) -> None:
         super().__init__()
 
-        num_progressive_layers = int(math.log2(final_img_size) - math.log2(self.initial_img_size))
+        num_progressive_layers = int(math.log2(final_img_size / self.initial_img_size))
 
-        self.latent_dim = latent_dim
-        self.img_channels = img_channels
-        self.num_progression = num_progressive_layers
+        self.config = dict(
+            latent_dim=latent_dim,
+            img_channels=img_channels,
+            final_img_size=final_img_size,
+            use_wscale=use_wscale,
+            use_pixelnorm=use_pixelnorm,
+            use_mb_stddev=use_mb_stddev,
+        )
 
         self.generator = Generator(
             latent_dim=latent_dim,
@@ -48,12 +54,54 @@ class ProGAN(nn.Module):
             use_wscale=use_wscale,
             use_mb_stddev=use_mb_stddev)
 
+    @property
+    def latent_dim(self) -> int:
+        return self.config["latent_dim"]
+
+    @property
+    def img_channels(self) -> int:
+        return self.config["img_channels"]
+
+    @property
+    def num_progression(self) -> int:
+        return int(math.log2(self.config["final_img_size"] / self.initial_img_size))
+
+    def state_dict(self) -> Dict:
+        return dict(
+            weights=super().state_dict(),
+            config=self.config,
+        )
+
+    @classmethod
+    def from_checkpoint(cls, checkpoint_path: str):
+        ckpt = torch.load(checkpoint_path, map_location="cpu")
+        model = cls.from_config(
+            ModelConfig(**ckpt["config"])
+        )
+
+        model.load_state_dict(
+            OrderedDict([
+                # to fix name change while using pytorch_lightnint
+                (key.replace("_module.", ""), value)
+                for key, value in ckpt["weights"].items()
+            ])
+        )
+
+        return model
+
     @classmethod
     def from_config(cls, config: ModelConfig):
         return cls(**config.dict())
 
-    def forward(self, noise: Tensor) -> Tensor:
-        return self.generator(noise)
+    @torch.no_grad()
+    def forward(self, noise: Tensor, progression_step: int = None, alpha: float = 1.0) -> Tensor:
+        progression_step = self.num_progression if progression_step is None else progression_step
+        fake_imgs = self.generator(
+            noise,
+            progression_step=progression_step,
+            alpha=alpha
+        )
+        return ((fake_imgs + 1) / 2).clip(min=0, max=1)
 
     def compute_discriminator_loss(
         self,

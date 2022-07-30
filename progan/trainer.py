@@ -1,3 +1,4 @@
+import os
 from collections import Counter
 
 from tqdm import tqdm
@@ -16,7 +17,7 @@ class LiteTrainer(LightningLite):
 
     @property
     def logger(self) -> SummaryWriter:
-        if self._logger is None:
+        if not hasattr(self, "_logger") or self._logger is None:
             self.logger = SummaryWriter()
         return self._logger
 
@@ -24,7 +25,19 @@ class LiteTrainer(LightningLite):
     def logger(self, logger: SummaryWriter):
         self._logger = logger
 
+    @property
+    def checkpoint_path(self) -> str:
+        if not hasattr(self, "_checkpoint_path") or self._checkpoint_path is None:
+            self._checkpoint_path = "./checkpoints/"
+        return self._checkpoint_path
+
+    @checkpoint_path.setter
+    def checkpoint_path(self, checkpoint_path: str):
+        self._checkpoint_path = checkpoint_path
+
     def run(self, model: nn.Module, dataset: VisionDataset, config: TrainerConfig):
+
+        os.makedirs(self.checkpoint_path, exist_ok=True)
 
         counters = Counter()
 
@@ -143,18 +156,22 @@ class LiteTrainer(LightningLite):
                         disc_losses = list()
 
             noise = generate_noise(model.latent_dim, batch_size=8).to(self.device)
-            with torch.no_grad():
-                fake_images = model.generator(
-                    noise,
-                    progression_step=step_config["step"],
-                    alpha=1.0,
-                )
+            fake_imgs = model(
+                noise,
+                progression_step=step_config["step"],
+            )
             self.logger.add_images(
                 "generated images",
-                ((fake_images.cpu().numpy() + 1) / 2).clip(min=0, max=1),
+                fake_imgs.cpu().numpy(),
                 global_step=counters["configuration_step"],
             )
 
-            # TODO save model
+            self.save(
+                model.state_dict(),
+                os.path.join(
+                    self.checkpoint_path,
+                    "progan.ckpt",
+                )
+            )
 
             counters["configuration_step"] += 1
