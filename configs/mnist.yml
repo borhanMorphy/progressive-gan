@@ -1,0 +1,20 @@
+trainer_config:
+  max_epochs: 30
+  initial_batch_size: 32
+  batch_size_factors: null
+  learning_rate: 0.0001
+  weight_decay: 0
+  betas: [0, 0.99]
+  eps: 0.00000001
+  gp_lambda: 10
+  eps_drift: 0.001
+  num_workers: 8
+  log_every_n_iter: 20
+
+model_config:
+  latent_dim: 128
+  img_channels: 1
+  final_img_size: 32
+  use_wscale: true
+  use_pixelnorm: true
+  use_mb_stddev: true

@@ -2,11 +2,12 @@ import os
 from collections import Counter
 
 from tqdm import tqdm
-import torch
+
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from pytorch_lightning.lite import LightningLite
+from torchmetrics import ROC
 
 from torchvision.datasets.vision import VisionDataset
 
@@ -154,6 +155,7 @@ class LiteTrainer(LightningLite):
                         counters["iter_step"] += 1
                         gen_losses = list()
                         disc_losses = list()
+
 
             noise = generate_noise(model.latent_dim, batch_size=8).to(self.device)
             fake_imgs = model(

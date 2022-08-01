@@ -1,23 +1,36 @@
 import argparse
+from typing import Tuple
+
+import yaml
 from torch.utils.tensorboard import SummaryWriter
-from torchvision.datasets import MNIST, CelebA
+from torchvision.datasets import MNIST, CelebA, VisionDataset
 import progan
 
-def main(args):
+def load_config(yml_file_path: str) -> Tuple[progan.ModelConfig, progan.TrainerConfig]:
 
-    dataset = MNIST(
-        root="./data",
-        download=True,
-        train=True,
-    )
+    with open(yml_file_path, "r") as foo:
+        config = yaml.load(foo, yaml.FullLoader)
 
     model_config = progan.ModelConfig(
-        latent_dim=2**7,
-        img_channels=1,
-        final_img_size=32,
+        **config.get("model_config", dict())
     )
 
-    train_config = progan.TrainerConfig()
+    trainer_config = progan.TrainerConfig(
+        **config.get("trainer_config", dict())
+    )
+
+    return model_config, trainer_config
+
+def get_dataset(dataset_name: str) -> VisionDataset:
+    if dataset_name.lower() == "mnist":
+        return MNIST("data", train=True, download=True)
+    elif dataset_name.lower() == "celeba":
+        return CelebA("data", split="train", download=True)
+    else:
+        raise AssertionError("dataset {} not found".format(dataset_name))
+
+def main(args):
+    model_config, train_config = args.config
 
     model = progan.ProGAN.from_config(model_config)
 
@@ -34,13 +47,15 @@ def main(args):
 
     trainer.run(
         model,
-        dataset,
+        args.dataset,
         train_config,
     )
 
 
 if __name__ == '__main__':
     ap = argparse.ArgumentParser()
+    ap.add_argument("--config", "-c", type=load_config, required=True)
+    ap.add_argument("--dataset", "-d", type=get_dataset, required=True)
     ap.add_argument("--gpus", "-g", type=int, default=1)
     ap.add_argument("--precision", "-p", type=int, default=32, choices=[16, 32])
     ap.add_argument("--seed", "-s", type=int)
