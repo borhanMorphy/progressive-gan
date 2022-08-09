@@ -1,5 +1,6 @@
 import os
 from collections import Counter
+from uuid import uuid4
 
 from tqdm import tqdm
 
@@ -35,6 +36,16 @@ class LiteTrainer(LightningLite):
     @checkpoint_path.setter
     def checkpoint_path(self, checkpoint_path: str):
         self._checkpoint_path = checkpoint_path
+
+    @property
+    def model_name(self) -> str:
+        if not hasattr(self, "_model_name") or self._model_name is None:
+            self._model_name = uuid4().hex[:6]
+        return self._model_name
+
+    @model_name.setter
+    def model_name(self, model_name: str):
+        self._model_name = model_name
 
     def run(self, model: nn.Module, dataset: VisionDataset, config: TrainerConfig):
 
@@ -172,7 +183,7 @@ class LiteTrainer(LightningLite):
                 model.state_dict(),
                 os.path.join(
                     self.checkpoint_path,
-                    "progan.ckpt",
+                    "{}_progan.ckpt".format(self.model_name),
                 )
             )
 

@@ -3,7 +3,7 @@ from typing import Tuple
 
 import yaml
 from torch.utils.tensorboard import SummaryWriter
-from torchvision.datasets import MNIST, CelebA, VisionDataset
+from torchvision.datasets import MNIST, CelebA, CIFAR10, VisionDataset
 import progan
 
 def load_config(yml_file_path: str) -> Tuple[progan.ModelConfig, progan.TrainerConfig]:
@@ -26,6 +26,8 @@ def get_dataset(dataset_name: str) -> VisionDataset:
         return MNIST("data", train=True, download=True)
     elif dataset_name.lower() == "celeba":
         return CelebA("data", split="train", download=True)
+    elif dataset_name.lower() == "cifar10":
+        return CIFAR10("data", train=True, download=True)
     else:
         raise AssertionError("dataset {} not found".format(dataset_name))
 
@@ -41,6 +43,7 @@ def main(args):
 
     trainer.logger = SummaryWriter(log_dir=args.log_dir)
     trainer.checkpoint_path = args.checkpoint_path
+    trainer.model_name = args.model_name
 
     if args.seed is not None:
         trainer.seed_everything(seed=args.seed)
@@ -61,6 +64,7 @@ if __name__ == '__main__':
     ap.add_argument("--seed", "-s", type=int)
     ap.add_argument("--log-dir", "-l", type=str)
     ap.add_argument("--checkpoint-path", type=str)
+    ap.add_argument("--model-name", "-m", type=str)
 
     args = ap.parse_args()
     main(args)
