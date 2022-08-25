@@ -38,6 +38,8 @@ class MinibatchSTDDev(nn.Module):
         batch_size, channels, fmap_h, fmap_w = x.shape
 
         groups = min(batch_size, self.groups)
+        if batch_size % groups:
+            groups = batch_size
 
         x_stats = x.reshape(groups, batch_size//groups, channels, fmap_h, fmap_w)
         # x_stats: G, M, C, H, W
